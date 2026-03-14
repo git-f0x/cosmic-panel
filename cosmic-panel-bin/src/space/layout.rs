@@ -1,6 +1,6 @@
 use std::{
     slice::IterMut,
-    sync::{Arc, MutexGuard, atomic::AtomicBool},
+    sync::{Arc, Mutex, MutexGuard, atomic::AtomicBool},
     time::{Duration, Instant},
 };
 
@@ -159,107 +159,53 @@ impl PanelSpace {
             })
             .collect_vec();
 
+        let map_clients = |clients: &Mutex<Vec<PanelClient>>| -> Vec<(
+            usize,
+            CosmicMappedInternal,
+            Option<u32>,
+            ShrinkablePadding,
+        )> {
+            let mut windows = to_map
+                .iter()
+                .cloned()
+                .filter_map(|w| {
+                    if w.toplevel().is_none() && matches!(&w, CosmicMappedInternal::Window(_)) {
+                        tracing::warn!("Window {:?} has no toplevel", w.bbox());
+                        return None;
+                    }
+                    clients.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
+                        if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
+                            || w.toplevel()
+                                .and_then(|t| t.wl_surface().client())
+                                .zip(c.client.as_ref())
+                                .is_some_and(|(c, w_c)| c.id() == w_c.id())
+                        {
+                            Some((
+                                i,
+                                w.clone(),
+                                c.minimize_priority,
+                                if c.padding_shrinkable {
+                                    ShrinkablePadding::Both
+                                } else {
+                                    ShrinkablePadding::None
+                                },
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect_vec();
+            make_indices_contiguous(&mut windows);
+            windows
+        };
+
+        let mut windows_left = map_clients(&self.clients_left);
+        let mut windows_center = map_clients(&self.clients_center);
+        let mut windows_right = map_clients(&self.clients_right);
+
         let is_dock = !self.config.expand_to_edges()
             || self.animate_state.as_ref().is_some_and(|a| !(a.cur.expanded > 0.5));
-        let mut windows_left = to_map
-            .iter()
-            .cloned()
-            .filter_map(|w| {
-                if w.toplevel().is_none() && matches!(&w, CosmicMappedInternal::Window(_)) {
-                    tracing::warn!("Window {:?} has no toplevel", w.bbox());
-                    return None;
-                };
-                self.clients_left.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
-                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
-                        || w.toplevel()
-                            .and_then(|t| t.wl_surface().client())
-                            .zip(c.client.as_ref())
-                            .is_some_and(|(c, w_c)| c.id() == w_c.id())
-                    {
-                        Some((
-                            i,
-                            w.clone(),
-                            c.minimize_priority,
-                            if c.padding_shrinkable {
-                                ShrinkablePadding::Both
-                            } else {
-                                ShrinkablePadding::None
-                            },
-                        ))
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect_vec();
-
-        make_indices_contiguous(&mut windows_left);
-
-        let mut windows_center = to_map
-            .iter()
-            .cloned()
-            .filter_map(|w| {
-                if w.toplevel().is_none() && matches!(&w, CosmicMappedInternal::Window(_)) {
-                    tracing::warn!("Window {:?} has no toplevel", w.bbox());
-                    return None;
-                };
-                self.clients_center.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
-                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
-                        || w.toplevel()
-                            .and_then(|t| t.wl_surface().client())
-                            .zip(c.client.as_ref())
-                            .is_some_and(|(c, w_c)| c.id() == w_c.id())
-                    {
-                        Some((
-                            i,
-                            w.clone(),
-                            c.minimize_priority,
-                            if c.padding_shrinkable {
-                                ShrinkablePadding::Both
-                            } else {
-                                ShrinkablePadding::None
-                            },
-                        ))
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect_vec();
-        make_indices_contiguous(&mut windows_center);
-
-        let mut windows_right = to_map
-            .iter()
-            .cloned()
-            .filter_map(|w| {
-                if w.toplevel().is_none() && matches!(&w, CosmicMappedInternal::Window(_)) {
-                    tracing::warn!("Window {:?} has no toplevel", w.bbox());
-                    return None;
-                };
-                self.clients_right.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
-                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
-                        || w.toplevel()
-                            .and_then(|t| t.wl_surface().client())
-                            .zip(c.client.as_ref())
-                            .is_some_and(|(c, w_c)| c.id() == w_c.id())
-                    {
-                        Some((
-                            i,
-                            w.clone(),
-                            c.minimize_priority,
-                            if c.padding_shrinkable {
-                                ShrinkablePadding::Both
-                            } else {
-                                ShrinkablePadding::None
-                            },
-                        ))
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect_vec();
-        make_indices_contiguous(&mut windows_right);
 
         if is_dock {
             windows_center = windows_left
