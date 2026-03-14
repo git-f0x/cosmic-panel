@@ -1,4 +1,4 @@
-use futures::stream::Stream;
+use cosmic::iced::futures::Stream;
 use ordered_stream::OrderedStreamExt;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -50,7 +50,7 @@ impl CosmicWorkspaces {
         let (sender, channel) = calloop::channel::channel();
         let workspaces = self.clone();
         self.runtime.spawn(async move {
-            use futures::StreamExt;
+            use cosmic::iced::futures::StreamExt;
             let mut stream = workspaces.is_shown_stream().await.unwrap();
             while let Some(value) = stream.next().await {
                 if sender.send(value).is_err() {

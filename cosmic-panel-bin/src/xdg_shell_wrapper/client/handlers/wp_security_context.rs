@@ -1,6 +1,7 @@
 use std::{
     os::{
         linux::net::SocketAddrExt,
+        unix::io::AsFd,
         unix::net::{SocketAddr, UnixListener, UnixStream},
     },
     sync::{Arc, Mutex},
@@ -11,7 +12,6 @@ use cctk::wayland_client::{
     globals::{BindError, GlobalList},
 };
 use rand::distr::{Alphanumeric, SampleString};
-use rustix::fd::AsFd;
 use sctk::globals::GlobalData;
 
 use wayland_protocols::wp::security_context::v1::client::{
@@ -57,7 +57,7 @@ impl SecurityContextManager {
         qh: &QueueHandle<GlobalState>,
     ) -> std::io::Result<WpSecurityContextV1> {
         // create a close fd that we can use to close the listener
-        let (close_fd_ours, close_fd) = rustix::pipe::pipe()?;
+        let (close_fd_ours, close_fd) = smithay::reexports::rustix::pipe::pipe()?;
         let s: String = Alphanumeric.sample_string(&mut rand::rng(), 50);
         let addr = SocketAddr::from_abstract_name(s)?;
         // this also listens on the socket

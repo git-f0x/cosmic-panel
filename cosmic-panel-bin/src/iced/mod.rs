@@ -6,20 +6,18 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     hash::{Hash, Hasher},
-    rc::Rc,
     sync::{Arc, LazyLock, Mutex, mpsc::Receiver},
     time::{Duration, Instant},
 };
 
 use crate::{iced::state::State, xdg_shell_wrapper::shared_state::GlobalState};
-use calloop::EventLoop;
 use cosmic::{
     Theme,
     iced::{
         self, Limits, Point as IcedPoint, Size as IcedSize, Task,
         advanced::widget::Tree,
         event::Event,
-        futures::{FutureExt, StreamExt},
+        futures::{self, FutureExt, StreamExt},
         keyboard::{Event as KeyboardEvent, Modifiers as IcedModifiers},
         mouse::{Button as MouseButton, Cursor, Event as MouseEvent, ScrollDelta},
         touch::{Event as TouchEvent, Finger},

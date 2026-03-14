@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use cosmic_notifications_util::PANEL_NOTIFICATIONS_FD;
 use smithay::reexports::rustix::{
     io::{FdFlags, fcntl_getfd, fcntl_setfd},

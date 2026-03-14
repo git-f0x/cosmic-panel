@@ -10,7 +10,7 @@ use cosmic::{
 };
 
 use crate::{
-    iced::{Element, IcedElement, Program, ProgramWrapper},
+    iced::{Element, IcedElement, Program},
     xdg_shell_wrapper::shared_state::GlobalState,
 };
 

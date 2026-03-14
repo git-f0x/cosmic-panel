@@ -6,8 +6,6 @@ use std::{
     sync::Arc,
 };
 
-use smithay::reexports::wayland_server::{self, Client};
-// SPDX-License-Identifier: MPL-2.0
 use anyhow::{Result, bail};
 use sctk::{
     reexports::client::protocol::{wl_shm, wl_surface::WlSurface},
@@ -15,6 +13,7 @@ use sctk::{
 };
 use smithay::{
     backend::renderer::{BufferType, buffer_type},
+    reexports::wayland_server::{self, Client},
     wayland::{
         compositor::BufferAssignment,
         shm::{BufferData, with_buffer_contents},

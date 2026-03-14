@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::ffi::{c_int, c_void};
 use std::sync::Arc;
 
 use anyhow::Result;
-use libc::{c_int, c_void};
 use sctk::reexports::client::{
     Proxy,
     protocol::{wl_display::WlDisplay, wl_surface::WlSurface},
