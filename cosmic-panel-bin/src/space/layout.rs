@@ -463,7 +463,7 @@ impl PanelSpace {
 
         let new_list_thickness = (2.0 * padding_scaled
             + chain!(left.clone(), center.clone(), right.clone())
-                .map(|(_, _, _, thickness, _, _)| thickness)
+                .map(|(_, _, _, thickness, ..)| thickness)
                 .max()
                 .unwrap_or(0) as f64
                 * self.scale) as i32;
@@ -664,7 +664,7 @@ impl PanelSpace {
         // XXX this is a bit of a hack around the fact that we want the spacer to be
         // placed before the overflow button
         if windows_left.is_empty() && !windows_center.is_empty() && is_overlapping_start {
-            let (_, CosmicMappedInternal::Spacer(s), _, _) = windows_center.remove(0) else {
+            let (_, CosmicMappedInternal::Spacer(s), ..) = windows_center.remove(0) else {
                 panic!("No spacer found");
             };
             let size = s.bbox().size.to_f64();
