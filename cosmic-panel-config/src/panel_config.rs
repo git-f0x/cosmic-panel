@@ -640,10 +640,7 @@ impl CosmicPanelConfig {
     }
 
     pub fn is_horizontal(&self) -> bool {
-        match self.anchor {
-            PanelAnchor::Top | PanelAnchor::Bottom => true,
-            _ => false,
-        }
+        matches!(self.anchor, PanelAnchor::Top | PanelAnchor::Bottom)
     }
 
     pub fn bg_color_override(&self) -> Option<[f32; 4]> {

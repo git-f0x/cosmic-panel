@@ -61,11 +61,12 @@ pub enum SpaceEvent {
 }
 
 /// Visibility of the space
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub enum Visibility {
     /// hidden
     Hidden,
     /// visible
+    #[default]
     Visible,
     /// transitioning to hidden
     TransitionToHidden {
@@ -85,12 +86,6 @@ pub enum Visibility {
         /// previously calculated value
         prev_margin: i32,
     },
-}
-
-impl Default for Visibility {
-    fn default() -> Self {
-        Self::Visible
-    }
 }
 
 // TODO break this trait into several traits so that it can be better organized

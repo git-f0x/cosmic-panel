@@ -105,10 +105,7 @@ where
     SpaceTarget: TryFrom<T>,
 {
     space.elements().rev().find_map(|e| {
-        let Some(location) = space.element_location(e) else {
-            return None;
-        };
-
+        let location = space.element_location(e)?;
         let mut bbox = e.geometry().to_f64();
         bbox.loc += location.to_f64();
         if let Some(configured_size) = e.toplevel().and_then(|t| t.current_state().size) {
@@ -481,50 +478,48 @@ impl WrapperSpace for PanelSpace {
                     let (panel_client, my_list, panel_side) = desktop_ids.remove(position);
                     info!(panel_client.name);
 
-                    if let Ok(bytes) = fs::read_to_string(&path) {
-                        if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
-                            if let Some(exec) = entry.exec() {
-                                panel_client.path = Some(path.clone());
-                                panel_client.exec = Some(exec.to_string());
-                                panel_client.requests_wayland_display =
-                                    Some(entry.desktop_entry("X-HostWaylandDisplay").is_some());
-                                panel_client.shrink_min_size = entry
-                                    .desktop_entry("X-OverflowMinSize")
-                                    .and_then(|x| x.parse::<u32>().ok())
-                                    .map(ClientShrinkSize::AppletUnit);
-                                panel_client.shrink_priority = entry
-                                    .desktop_entry("X-OverflowPriority")
-                                    .and_then(|x| x.parse::<u32>().ok());
-                                panel_client.padding_shrinkable = entry
-                                    .desktop_entry("X-CosmicShrinkable")
-                                    .map(|x| x == "true")
-                                    .unwrap_or_default();
+                    if let Ok(bytes) = fs::read_to_string(&path)
+                        && let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales))
+                        && let Some(exec) = entry.exec()
+                    {
+                        panel_client.path = Some(path.clone());
+                        panel_client.exec = Some(exec.to_string());
+                        panel_client.requests_wayland_display =
+                            Some(entry.desktop_entry("X-HostWaylandDisplay").is_some());
+                        panel_client.shrink_min_size = entry
+                            .desktop_entry("X-OverflowMinSize")
+                            .and_then(|x| x.parse::<u32>().ok())
+                            .map(ClientShrinkSize::AppletUnit);
+                        panel_client.shrink_priority = entry
+                            .desktop_entry("X-OverflowPriority")
+                            .and_then(|x| x.parse::<u32>().ok());
+                        panel_client.padding_shrinkable = entry
+                            .desktop_entry("X-CosmicShrinkable")
+                            .map(|x| x == "true")
+                            .unwrap_or_default();
 
-                                panel_client.minimize_priority = if let Some(x_minimize_entry) =
-                                    entry.desktop_entry("X-MinimizeApplet")
-                                {
-                                    match x_minimize_entry.parse::<u32>() {
-                                        Ok(p) => {
-                                            max_minimize_priority = max_minimize_priority.max(p);
-                                            Some(p)
-                                        },
-                                        Err(_) => Some(0),
-                                    }
-                                } else {
-                                    None
-                                };
-
-                                panel_client.auto_popup_hover_press =
-                                    entry.desktop_entry("X-CosmicHoverPopup").map(|v| {
-                                        v.parse::<AppletAutoClickAnchor>().unwrap_or_default()
-                                    });
-
-                                panel_client.is_notification_applet =
-                                    Some(entry.desktop_entry("X-NotificationsApplet").is_some());
-
-                                panel_clients.push((panel_client, my_list, panel_side));
+                        panel_client.minimize_priority = if let Some(x_minimize_entry) =
+                            entry.desktop_entry("X-MinimizeApplet")
+                        {
+                            match x_minimize_entry.parse::<u32>() {
+                                Ok(p) => {
+                                    max_minimize_priority = max_minimize_priority.max(p);
+                                    Some(p)
+                                },
+                                Err(_) => Some(0),
                             }
-                        }
+                        } else {
+                            None
+                        };
+
+                        panel_client.auto_popup_hover_press = entry
+                            .desktop_entry("X-CosmicHoverPopup")
+                            .map(|v| v.parse::<AppletAutoClickAnchor>().unwrap_or_default());
+
+                        panel_client.is_notification_applet =
+                            Some(entry.desktop_entry("X-NotificationsApplet").is_some());
+
+                        panel_clients.push((panel_client, my_list, panel_side));
                     }
                 }
             }
@@ -574,27 +569,27 @@ impl WrapperSpace for PanelSpace {
                     ron::ser::to_string(&self.config.get_effective_applet_size(panel_side))
                         .unwrap_or_default();
                 applet_env.push(("COSMIC_PANEL_SIZE".to_string(), config_size));
-                if requests_wayland_display {
-                    if let Some(security_context_manager) = security_context_manager.as_ref() {
-                        match security_context_manager.create_listener::<SpaceContainer>(qh) {
-                            Ok(security_context) => {
-                                security_context.set_sandbox_engine(NAME.to_string());
-                                security_context.commit();
+                if requests_wayland_display
+                    && let Some(security_context_manager) = security_context_manager.as_ref()
+                {
+                    match security_context_manager.create_listener::<SpaceContainer>(qh) {
+                        Ok(security_context) => {
+                            security_context.set_sandbox_engine(NAME.to_string());
+                            security_context.commit();
 
-                                let data = security_context.data::<SecurityContext>().unwrap();
-                                let privileged_socket = data.conn.lock().unwrap().take().unwrap();
-                                applet_env.push((
-                                    "X_PRIVILEGED_WAYLAND_SOCKET".to_string(),
-                                    privileged_socket.0.as_raw_fd().to_string(),
-                                ));
+                            let data = security_context.data::<SecurityContext>().unwrap();
+                            let privileged_socket = data.conn.lock().unwrap().take().unwrap();
+                            applet_env.push((
+                                "X_PRIVILEGED_WAYLAND_SOCKET".to_string(),
+                                privileged_socket.0.as_raw_fd().to_string(),
+                            ));
 
-                                fds.push(privileged_socket.0.into());
-                                panel_client.security_ctx = Some(security_context);
-                            },
-                            Err(why) => {
-                                error!(?why, "Failed to create a listener");
-                            },
-                        }
+                            fds.push(privileged_socket.0.into());
+                            panel_client.security_ctx = Some(security_context);
+                        },
+                        Err(why) => {
+                            error!(?why, "Failed to create a listener");
+                        },
                     }
                 }
 
@@ -780,10 +775,7 @@ impl WrapperSpace for PanelSpace {
                                 args.retain(|arg| !arg.contains("WAYLAND_SOCKET"));
                                 args.insert(
                                     args.len().saturating_sub(2),
-                                    format!(
-                                        "--env=WAYLAND_SOCKET={}",
-                                        raw_client_socket.to_string()
-                                    ),
+                                    format!("--env=WAYLAND_SOCKET={}", raw_client_socket),
                                 );
                             }
                             let _ = pman.update_process_env(&key, applet_env.clone()).await;
@@ -1391,10 +1383,10 @@ impl WrapperSpace for PanelSpace {
 
     fn keyboard_leave(&mut self, seat_name: &str, f: Option<c_wl_surface::WlSurface>) {
         // if not a leaf, return early
-        if let Some(surface) = f.as_ref() {
-            if self.popups.iter().any(|p| p.popup.parent == *surface) {
-                return;
-            }
+        if let Some(surface) = f.as_ref()
+            && self.popups.iter().any(|p| p.popup.parent == *surface)
+        {
+            return;
         }
         if self.layer.as_ref().zip(f).is_some_and(|l| l.0.wl_surface() == &l.1)
             && (self.popups.iter().any(|p| p.popup.grab) || self.overflow_popup.is_some())

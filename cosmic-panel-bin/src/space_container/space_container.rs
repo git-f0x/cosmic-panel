@@ -323,16 +323,16 @@ impl SpaceContainer {
             // panel anchor change forces restart
             || opposite_anchor.is_some()
             // applet restarts are required
-            || ((c.name == entry.name
+            || (c.name == entry.name
                 && (c.is_horizontal() != entry.is_horizontal()
                 || c.size != entry.size
                 || c.background != entry.background
                 || c.plugins_center != entry.plugins_center
-                || c.plugins_wings != entry.plugins_wings)))
+                || c.plugins_wings != entry.plugins_wings))
             // Priority change to conflict with adjacent panel
             || c.name != entry.name
                 && Some(c.anchor) != opposite_anchor
-                && ((old_priority < c.get_priority() && new_priority > c.get_priority() || old_priority > c.get_priority() && new_priority < c.get_priority()))}
+                && (old_priority < c.get_priority() && new_priority > c.get_priority() || old_priority > c.get_priority() && new_priority < c.get_priority())}
             || c.name != entry.name && old_priority != new_priority && c.anchor == entry.anchor
             // || self.space_list.iter().any(|s| s.has_layer_overlap())
 
@@ -418,7 +418,7 @@ impl SpaceContainer {
 
             let maximized_output = maximized_outputs.contains(wl_output);
             let mut configs = self.config.configs_for_output(&output_name);
-            configs.sort_by(|a, b| b.get_priority().cmp(&a.get_priority()));
+            configs.sort_by_key(|b| std::cmp::Reverse(b.get_priority()));
             for c in &configs {
                 let is_recreated = c.name == entry.name
                     || Some(c.anchor) == opposite_anchor && c.get_priority() < new_priority

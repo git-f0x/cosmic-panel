@@ -69,7 +69,7 @@ pub mod panel_message;
 static ID: LazyLock<Id> = LazyLock::new(|| Id::new("Program"));
 
 thread_local! {
-pub static EVENT_LOOP_HANDLE: OnceCell<RefCell<LoopHandle<'static, GlobalState>>> = OnceCell::new();
+pub static EVENT_LOOP_HANDLE: OnceCell<RefCell<LoopHandle<'static, GlobalState>>> = const { OnceCell::new() };
 }
 pub type Element<'a, Message> = cosmic::iced::Element<'a, Message, cosmic::Theme, cosmic::Renderer>;
 
@@ -162,10 +162,9 @@ impl iced::Executor for MyExecutor {
     where
         Self: Sized,
     {
-        let (executor, scheduler) = calloop::futures::executor().map_err(|_| {
-            futures::io::Error::new(futures::io::ErrorKind::Other, "Failed to create executor")
-        })?;
-        let (tx, rx) = std::sync::mpsc::channel();
+        let (executor, scheduler) = calloop::futures::executor()
+            .map_err(|_| futures::io::Error::other("Failed to create executor"))?;
+        let (tx, _rx) = std::sync::mpsc::channel();
         let handle = EVENT_LOOP_HANDLE.with(|l| {
             let g = l.get().unwrap().borrow();
             g.clone()
@@ -175,12 +174,7 @@ impl iced::Executor for MyExecutor {
             .insert_source(executor, move |message, _, _| {
                 let _ = tx.send(message);
             })
-            .map_err(|_| {
-                futures::io::Error::new(
-                    futures::io::ErrorKind::Other,
-                    "Failed to insert executor into event loop",
-                )
-            })?;
+            .map_err(|_| futures::io::Error::other("Failed to insert executor into event loop"))?;
         Ok(MyExecutor { scheduler, executor_token: Some(executor_token) })
     }
 
@@ -188,7 +182,7 @@ impl iced::Executor for MyExecutor {
         self.scheduler.schedule(future).unwrap();
     }
 
-    fn block_on<T>(&self, future: impl Future<Output = T>) -> T {
+    fn block_on<T>(&self, _future: impl Future<Output = T>) -> T {
         panic!("block_on is not supported");
     }
 }
@@ -898,14 +892,10 @@ where
         let mut internal = self.0.lock().unwrap();
         // makes partial borrows easier
         let internal_ref = &mut *internal;
-        let force = if matches!(
+        let force = matches!(
             internal_ref.pending_update,
             Some(instant) if Instant::now().duration_since(instant) > Duration::from_millis(25)
-        ) {
-            true
-        } else {
-            false
-        };
+        );
         if force {
             internal_ref.pending_update = None;
         }

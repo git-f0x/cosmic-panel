@@ -421,9 +421,7 @@ impl PanelSpace {
                         None
                     },
                     crate::iced::elements::PopupMappedInternal::Window(w) => {
-                        let Some(t) = w.toplevel() else {
-                            return None;
-                        };
+                        let t = w.toplevel()?;
 
                         let loc = space
                             .element_location(&PopupMappedInternal::Window(w.clone()))

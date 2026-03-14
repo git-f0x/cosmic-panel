@@ -113,7 +113,7 @@ fn main() -> Result<()> {
 
     let event_loop = calloop::EventLoop::try_new()?;
     let handle = event_loop.handle();
-    EVENT_LOOP_HANDLE.with(move |l| l.set(RefCell::new(handle)));
+    let _ = EVENT_LOOP_HANDLE.with(move |l| l.set(RefCell::new(handle)));
 
     let mut space = space_container::SpaceContainer::new(
         config,

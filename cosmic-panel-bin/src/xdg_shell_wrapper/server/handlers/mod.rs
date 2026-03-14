@@ -120,7 +120,7 @@ impl SeatHandler for GlobalState {
             smithay::input::pointer::CursorImageStatus::Surface(surface) => {
                 trace!("received surface with cursor image");
                 let vp = with_states(&surface, |states| {
-                    states.cached_state.get::<ViewportCachedState>().current().clone()
+                    *states.cached_state.get::<ViewportCachedState>().current()
                 });
 
                 if let Some((vp, dst)) = self.client_state.cursor_vp.as_ref().zip(vp.dst) {
