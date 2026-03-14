@@ -31,7 +31,8 @@ impl CosmicWorkspaces {
         Ok(Self { proxy, runtime: Arc::new(runtime) })
     }
 
-    /// A stream yielding a boolean when the workspaces overlay is shown or hidden
+    /// A stream yielding a boolean when the workspaces overlay is shown or
+    /// hidden
     pub async fn is_shown_stream(&self) -> zbus::Result<impl Stream<Item = bool> + 'static> {
         let shown_stream = self.proxy.receive_shown().await?;
         let hidden_stream = self.proxy.receive_hidden().await?;
@@ -44,7 +45,8 @@ impl CosmicWorkspaces {
         .into_stream())
     }
 
-    /// An event source yielding a boolean when the workspaces overlay is shown or hidden
+    /// An event source yielding a boolean when the workspaces overlay is shown
+    /// or hidden
     // TODO Use `StreamSource` when calloop version with that is released
     pub fn is_shown_event_source(&self) -> calloop::channel::Channel<bool> {
         let (sender, channel) = calloop::channel::channel();

@@ -1,12 +1,17 @@
 use super::IcedProgram as Program;
-use cosmic::iced::core::event::{self, Event};
-use cosmic::iced::core::mouse;
-use cosmic::iced::core::renderer;
-use cosmic::iced::core::widget::operation::{self, Operation};
-use cosmic::iced::core::{Clipboard, Size};
-use cosmic::iced_core;
-use cosmic::iced_runtime::Task;
-use cosmic::iced_runtime::user_interface::{self, UserInterface};
+use cosmic::{
+    iced::core::{
+        Clipboard, Size,
+        event::{self, Event},
+        mouse, renderer,
+        widget::operation::{self, Operation},
+    },
+    iced_core,
+    iced_runtime::{
+        Task,
+        user_interface::{self, UserInterface},
+    },
+};
 
 /// The execution state of a [`Program`]. It leverages caching, event
 /// processing, and rendering primitive storage.

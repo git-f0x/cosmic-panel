@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use std::ffi::{c_int, c_void};
-use std::sync::Arc;
+use std::{
+    ffi::{c_int, c_void},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use sctk::reexports::client::{
