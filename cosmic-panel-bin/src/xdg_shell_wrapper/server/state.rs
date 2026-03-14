@@ -27,12 +27,11 @@ use crate::{
 };
 
 /// list of focused surfaces and the seats that focus them
-
 pub type ServerFocus = Vec<(SpaceTarget, String)>;
-#[allow(missing_debug_implementations)]
 
-/// Information for tracking the server pointer focus
+#[allow(missing_debug_implementations)]
 #[derive(Debug, Clone)]
+/// Information for tracking the server pointer focus
 pub struct ServerPointerFocus {
     /// focused wl surface
     pub surface: SpaceTarget,

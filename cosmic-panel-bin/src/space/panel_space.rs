@@ -466,11 +466,7 @@ impl PanelSpace {
     }
 
     pub fn has_toplevel_overlap(&self) -> bool {
-        self.toplevel_overlaps
-            .iter()
-            .filter(|t| !self.minimized_toplevels.contains(&t))
-            .next()
-            .is_some()
+        self.toplevel_overlaps.iter().any(|t| !self.minimized_toplevels.contains(t))
     }
 
     pub fn crosswise(&self) -> i32 {
@@ -509,25 +505,23 @@ impl PanelSpace {
                             - self.config.spacing as i32
                             + self.config.margin as i32;
                 }
+            } else if rect.loc.y + rect.size.h < self.dimensions.h / 2 {
+                self.logical_layer_start_overlap =
+                    self.logical_layer_start_overlap.max(rect.loc.y + rect.size.h)
+                        - self.config.spacing as i32
+                        + self.config.margin as i32;
             } else {
-                if rect.loc.y + rect.size.h < self.dimensions.h / 2 {
-                    self.logical_layer_start_overlap =
-                        self.logical_layer_start_overlap.max(rect.loc.y + rect.size.h)
-                            - self.config.spacing as i32
-                            + self.config.margin as i32;
-                } else {
-                    self.logical_layer_end_overlap =
-                        self.logical_layer_end_overlap.max(self.dimensions.h - rect.loc.y)
-                            - self.config.spacing as i32
-                            + self.config.margin as i32;
-                }
+                self.logical_layer_end_overlap =
+                    self.logical_layer_end_overlap.max(self.dimensions.h - rect.loc.y)
+                        - self.config.spacing as i32
+                        + self.config.margin as i32;
             }
         }
         let layer_major = match self.config.anchor {
             PanelAnchor::Left | PanelAnchor::Right => self.dimensions.h,
             PanelAnchor::Top | PanelAnchor::Bottom => self.dimensions.w,
         };
-        let container_length = self.container_length as i32;
+        let container_length = self.container_length;
         let is_overlapping_start =
             layer_major.saturating_sub(container_length) < 2 * self.logical_layer_start_overlap;
         let is_overlapping_end =
@@ -551,9 +545,9 @@ impl PanelSpace {
         let mut left_guard = self.clients_left.lock().unwrap();
         let mut center_guard = self.clients_center.lock().unwrap();
 
-        if left_guard.get(0).is_some_and(|c| c.name == "spacer-start") {
+        if left_guard.first().is_some_and(|c| c.name == "spacer-start") {
             left_guard.remove(0);
-        } else if center_guard.get(0).is_some_and(|c| c.name == "spacer-start") {
+        } else if center_guard.first().is_some_and(|c| c.name == "spacer-start") {
             center_guard.remove(0);
         }
 
@@ -574,9 +568,9 @@ impl PanelSpace {
         let mut right_guard = self.clients_right.lock().unwrap();
         let mut center_guard = self.clients_center.lock().unwrap();
 
-        if right_guard.get(0).is_some_and(|c| c.name == "spacer-end") {
+        if right_guard.first().is_some_and(|c| c.name == "spacer-end") {
             right_guard.remove(0);
-        } else if center_guard.get(0).is_some_and(|c| c.name == "spacer-end") {
+        } else if center_guard.first().is_some_and(|c| c.name == "spacer-end") {
             center_guard.remove(0);
         }
 
@@ -614,9 +608,9 @@ impl PanelSpace {
         };
 
         // add to list if not already there
-        if left_guard.get(0).is_some_and(|c| c.name != "spacer-start") {
+        if left_guard.first().is_some_and(|c| c.name != "spacer-start") {
             left_guard.insert(0, spacer_client);
-        } else if center_guard.get(0).is_some_and(|c| c.name != "spacer-start") {
+        } else if center_guard.first().is_some_and(|c| c.name != "spacer-start") {
             center_guard.insert(0, spacer_client);
         }
 
@@ -630,11 +624,8 @@ impl PanelSpace {
             self.space.unmap_elem(&e);
         }
 
-        let size = if self.config.is_horizontal() {
-            (dim as i32, 4 as i32)
-        } else {
-            (4 as i32, dim as i32)
-        };
+        let size =
+            if self.config.is_horizontal() { (dim as i32, 4_i32) } else { (4_i32, dim as i32) };
         self.space.map_element(
             CosmicMappedInternal::Spacer(Spacer {
                 name: "spacer-start".to_string(),
@@ -688,11 +679,8 @@ impl PanelSpace {
         {
             self.space.unmap_elem(&e);
         }
-        let size = if self.config.is_horizontal() {
-            (dim as i32, 4 as i32)
-        } else {
-            (4 as i32, dim as i32)
-        };
+        let size =
+            if self.config.is_horizontal() { (dim as i32, 4_i32) } else { (4_i32, dim as i32) };
         self.space.map_element(
             CosmicMappedInternal::Spacer(Spacer {
                 name: "spacer-end".to_string(),
@@ -809,7 +797,7 @@ impl PanelSpace {
                 return;
             };
 
-            let f = c_hovered_surface.iter().fold(
+            c_hovered_surface.iter().fold(
                 if self.animate_state.is_some() || (intellihide && !self.has_toplevel_overlap()) {
                     FocusStatus::Focused
                 } else {
@@ -845,8 +833,7 @@ impl PanelSpace {
                         acc
                     }
                 },
-            );
-            f
+            )
         };
 
         let intellihide = self.overlap_notify.is_some();
@@ -1053,7 +1040,7 @@ impl PanelSpace {
 
             self.transitioning = true;
             self.is_dirty = true;
-            let panel_size =
+            let _panel_size =
                 if self.config().is_horizontal() { self.dimensions.h } else { self.dimensions.w };
 
             self.anchor_gap = 0;
@@ -1199,16 +1186,15 @@ impl PanelSpace {
                 self.space_event.as_ref().get(),
                 Some(SpaceEvent::WaitConfigure { first, .. }) if first
             )
+            && let Some(layer) = self.layer.as_ref()
         {
-            if let Some(layer) = self.layer.as_ref() {
-                Self::set_margin(
-                    self.config.anchor,
-                    self.config.get_margin() as i32,
-                    self.additional_gap,
-                    layer,
-                );
-                self.anchor_gap = 0;
-            }
+            Self::set_margin(
+                self.config.anchor,
+                self.config.get_margin() as i32,
+                self.additional_gap,
+                layer,
+            );
+            self.anchor_gap = 0;
         }
     }
 
@@ -1322,10 +1308,11 @@ impl PanelSpace {
             });
             self.subsurfaces.retain_mut(|s: &mut WrapperSubsurface| s.handle_events());
             self.handle_overflow_popup_events(renderer);
-            if prev == self.popups.len() && should_render {
-                if let Err(e) = self.render(renderer, time, throttle, qh) {
-                    error!("Failed to render, error: {:?}", e);
-                }
+            if prev == self.popups.len()
+                && should_render
+                && let Err(e) = self.render(renderer, time, throttle, qh)
+            {
+                error!("Failed to render, error: {:?}", e);
             }
         }
 
@@ -1679,20 +1666,20 @@ impl PanelSpace {
         }
 
         let mut needs_commit = false;
-        if config.exclusive_zone != self.config.exclusive_zone {
-            if let Some(l) = self.layer.as_ref() {
-                let list_thickness = if config.exclusive_zone {
-                    match self.config.anchor() {
-                        PanelAnchor::Left | PanelAnchor::Right => self.dimensions.w,
-                        PanelAnchor::Top | PanelAnchor::Bottom => self.dimensions.h,
-                    }
-                } else {
-                    -1
-                };
+        if config.exclusive_zone != self.config.exclusive_zone
+            && let Some(l) = self.layer.as_ref()
+        {
+            let list_thickness = if config.exclusive_zone {
+                match self.config.anchor() {
+                    PanelAnchor::Left | PanelAnchor::Right => self.dimensions.w,
+                    PanelAnchor::Top | PanelAnchor::Bottom => self.dimensions.h,
+                }
+            } else {
+                -1
+            };
 
-                l.set_exclusive_zone(list_thickness);
-                needs_commit = true;
-            }
+            l.set_exclusive_zone(list_thickness);
+            needs_commit = true;
         }
 
         if config.autohide.is_none() && self.config.autohide.is_some() {
@@ -1713,13 +1700,13 @@ impl PanelSpace {
                 l.set_size(width as u32, height as u32);
                 needs_commit = true;
             }
-        } else if self.config.get_effective_anchor_gap() != config.get_effective_anchor_gap() {
-            if let Some(l) = self.layer.as_ref() {
-                let margin = config.get_effective_anchor_gap() as i32;
-                Self::set_margin(config.anchor, margin, self.additional_gap, l);
-                self.anchor_gap = 0;
-                needs_commit = true;
-            }
+        } else if self.config.get_effective_anchor_gap() != config.get_effective_anchor_gap()
+            && let Some(l) = self.layer.as_ref()
+        {
+            let margin = config.get_effective_anchor_gap() as i32;
+            Self::set_margin(config.anchor, margin, self.additional_gap, l);
+            self.anchor_gap = 0;
+            needs_commit = true;
         }
 
         // try to force rearrangement
@@ -1756,10 +1743,8 @@ impl PanelSpace {
             self.reset_overflow();
         }
 
-        if needs_commit {
-            if let Some(l) = self.layer.as_ref() {
-                l.commit();
-            }
+        if needs_commit && let Some(l) = self.layer.as_ref() {
+            l.commit();
         }
 
         if animate {
@@ -1843,13 +1828,13 @@ impl PanelSpace {
         // send None for configure to force re-configure all windows
         let elements = self.space.elements().cloned().collect::<Vec<_>>();
         for e in elements {
-            if let CosmicMappedInternal::Window(w) = e {
-                if let Some(t) = w.toplevel() {
-                    t.with_pending_state(|s| {
-                        s.size = None;
-                    });
-                    t.send_pending_configure();
-                }
+            if let CosmicMappedInternal::Window(w) = e
+                && let Some(t) = w.toplevel()
+            {
+                t.with_pending_state(|s| {
+                    s.size = None;
+                });
+                t.send_pending_configure();
             }
         }
         self.close_popups(|_| false);
@@ -2013,10 +1998,10 @@ impl PanelSpace {
             .space
             .elements()
             .find(|e| {
-                if let CosmicMappedInternal::Window(w) = e {
-                    if let Some(t) = w.toplevel() {
-                        return *t == surface;
-                    }
+                if let CosmicMappedInternal::Window(w) = e
+                    && let Some(t) = w.toplevel()
+                {
+                    return *t == surface;
                 }
                 false
             })
@@ -2033,10 +2018,10 @@ impl PanelSpace {
 
     pub fn unminimize_window(&mut self, surface: ToplevelSurface) -> bool {
         let pos = self.unmapped_windows.iter().position(|e| {
-            if let CosmicMappedInternal::Window(w) = e {
-                if let Some(t) = w.toplevel() {
-                    return *t == surface;
-                }
+            if let CosmicMappedInternal::Window(w) = e
+                && let Some(t) = w.toplevel()
+            {
+                return *t == surface;
             }
             false
         });

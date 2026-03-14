@@ -221,7 +221,7 @@ impl GlobalState {
                             &MotionEvent {
                                 location: Point::from((surface_x, surface_y)),
                                 serial: SERIAL_COUNTER.next_serial(),
-                                time: time.try_into().unwrap(),
+                                time,
                             },
                         );
                         ptr.frame(self);

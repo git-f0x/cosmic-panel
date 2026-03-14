@@ -1,9 +1,7 @@
 use std::{
-    i32,
     slice::IterMut,
     sync::{Arc, MutexGuard, atomic::AtomicBool},
     time::{Duration, Instant},
-    u32,
 };
 
 use crate::{
@@ -120,7 +118,7 @@ impl PanelSpace {
         let mut right_overflow_button = None;
         let mut center_overflow_button = None;
 
-        let mut to_map = self
+        let to_map = self
             .space
             .elements()
             .cloned()
@@ -172,22 +170,11 @@ impl PanelSpace {
                     return None;
                 };
                 self.clients_left.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
-                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name) {
-                        Some((
-                            i,
-                            w.clone(),
-                            c.minimize_priority,
-                            if c.padding_shrinkable {
-                                ShrinkablePadding::Both
-                            } else {
-                                ShrinkablePadding::None
-                            },
-                        ))
-                    } else if w
-                        .toplevel()
-                        .and_then(|t| t.wl_surface().client())
-                        .zip(c.client.as_ref())
-                        .is_some_and(|(c, w_c)| c.id() == w_c.id())
+                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
+                        || w.toplevel()
+                            .and_then(|t| t.wl_surface().client())
+                            .zip(c.client.as_ref())
+                            .is_some_and(|(c, w_c)| c.id() == w_c.id())
                     {
                         Some((
                             i,
@@ -217,22 +204,11 @@ impl PanelSpace {
                     return None;
                 };
                 self.clients_center.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
-                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name) {
-                        Some((
-                            i,
-                            w.clone(),
-                            c.minimize_priority,
-                            if c.padding_shrinkable {
-                                ShrinkablePadding::Both
-                            } else {
-                                ShrinkablePadding::None
-                            },
-                        ))
-                    } else if w
-                        .toplevel()
-                        .and_then(|t| t.wl_surface().client())
-                        .zip(c.client.as_ref())
-                        .is_some_and(|(c, w_c)| c.id() == w_c.id())
+                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
+                        || w.toplevel()
+                            .and_then(|t| t.wl_surface().client())
+                            .zip(c.client.as_ref())
+                            .is_some_and(|(c, w_c)| c.id() == w_c.id())
                     {
                         Some((
                             i,
@@ -261,22 +237,11 @@ impl PanelSpace {
                     return None;
                 };
                 self.clients_right.lock().unwrap().iter().enumerate().find_map(|(i, c)| {
-                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name) {
-                        Some((
-                            i,
-                            w.clone(),
-                            c.minimize_priority,
-                            if c.padding_shrinkable {
-                                ShrinkablePadding::Both
-                            } else {
-                                ShrinkablePadding::None
-                            },
-                        ))
-                    } else if w
-                        .toplevel()
-                        .and_then(|t| t.wl_surface().client())
-                        .zip(c.client.as_ref())
-                        .is_some_and(|(c, w_c)| c.id() == w_c.id())
+                    if matches!(w, CosmicMappedInternal::Spacer(ref s) if s.name == c.name)
+                        || w.toplevel()
+                            .and_then(|t| t.wl_surface().client())
+                            .zip(c.client.as_ref())
+                            .is_some_and(|(c, w_c)| c.id() == w_c.id())
                     {
                         Some((
                             i,
@@ -906,13 +871,13 @@ impl PanelSpace {
             }
 
             let start_overlap = if self.logical_layer_start_overlap > 0 && is_overlapping_start {
-                self.logical_layer_start_overlap as i32 + self.config.spacing as i32
+                self.logical_layer_start_overlap + self.config.spacing as i32
             } else {
                 0
             };
 
             let end_overlap = if self.logical_layer_end_overlap > 0 && is_overlapping_end {
-                self.logical_layer_end_overlap as i32 + self.config.spacing as i32
+                self.logical_layer_end_overlap + self.config.spacing as i32
             } else {
                 0
             };
@@ -1108,8 +1073,8 @@ impl PanelSpace {
         let mut overflow_cnt: usize = 0;
         let cur_cnt = elements.len();
 
-        let applet_size_unit = self.config.size.get_applet_icon_size_with_padding(true);
-        let padding = self.config.padding as i32;
+        let _applet_size_unit = self.config.size.get_applet_icon_size_with_padding(true);
+        let _padding = self.config.padding as i32;
         let spacing = self.config.spacing as i32;
         let Some(output) = self.output.as_ref().map(|o| o.1.clone()) else {
             return;
@@ -1210,11 +1175,12 @@ impl PanelSpace {
         &self,
         clients: impl Iterator<Item = &'a PanelClient>,
     ) -> OverflowClientPartition {
-        let mut overflow_partition = OverflowClientPartition::default();
-        overflow_partition.suggested_size =
-            (self.config.size.get_applet_icon_size_with_padding(true) as f64
+        let mut overflow_partition = OverflowClientPartition {
+            suggested_size: (self.config.size.get_applet_icon_size_with_padding(true) as f64
                 + 2. * self.config.get_applet_padding(true) as f64)
-                .round() as u32;
+                .round() as u32,
+            ..Default::default()
+        };
         for c in clients {
             let Some(w) = self.space.elements().find_map(|e| {
                 let CosmicMappedInternal::Window(w) = e else {
@@ -1642,11 +1608,11 @@ impl PanelSpace {
                 &mut self.overflow_left,
                 suggested_size,
             );
-            if self.overflow_left.elements().all(|e| matches!(e, PopupMappedInternal::Popup(_))) {
-                if let Some(overflow_button) = left_overflow_button.take() {
-                    self.space.unmap_elem(&CosmicMappedInternal::OverflowButton(overflow_button));
-                    self.space.refresh();
-                }
+            if self.overflow_left.elements().all(|e| matches!(e, PopupMappedInternal::Popup(_)))
+                && let Some(overflow_button) = left_overflow_button.take()
+            {
+                self.space.unmap_elem(&CosmicMappedInternal::OverflowButton(overflow_button));
+                self.space.refresh();
             }
         } else if extra_space > suggested_size {
             self.relax_overflow_clients(&mut clients, extra_space);
@@ -1671,11 +1637,11 @@ impl PanelSpace {
                 &mut self.overflow_center,
                 suggested_size,
             );
-            if self.overflow_center.elements().all(|e| matches!(e, PopupMappedInternal::Popup(_))) {
-                if let Some(overflow_button) = center_overflow_button.take() {
-                    self.space.unmap_elem(&CosmicMappedInternal::OverflowButton(overflow_button));
-                    self.space.refresh();
-                }
+            if self.overflow_center.elements().all(|e| matches!(e, PopupMappedInternal::Popup(_)))
+                && let Some(overflow_button) = center_overflow_button.take()
+            {
+                self.space.unmap_elem(&CosmicMappedInternal::OverflowButton(overflow_button));
+                self.space.refresh();
             }
         } else {
             self.relax_overflow_clients(&mut clients, extra_space);
@@ -1753,11 +1719,11 @@ impl PanelSpace {
                 &mut self.overflow_right,
                 suggested_size,
             );
-            if self.overflow_right.elements().all(|e| matches!(e, PopupMappedInternal::Popup(_))) {
-                if let Some(overflow_button) = right_overflow_button.take() {
-                    self.space.unmap_elem(&CosmicMappedInternal::OverflowButton(overflow_button));
-                    self.space.refresh();
-                }
+            if self.overflow_right.elements().all(|e| matches!(e, PopupMappedInternal::Popup(_)))
+                && let Some(overflow_button) = right_overflow_button.take()
+            {
+                self.space.unmap_elem(&CosmicMappedInternal::OverflowButton(overflow_button));
+                self.space.refresh();
             }
         } else {
             self.relax_overflow_clients(&mut clients, extra_space);

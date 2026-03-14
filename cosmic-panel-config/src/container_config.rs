@@ -109,7 +109,7 @@ impl CosmicPanelContainerConfig {
                 _ => false,
             })
             .collect();
-        configs.sort_by(|a, b| b.get_priority().cmp(&a.get_priority()));
+        configs.sort_by_key(|b| std::cmp::Reverse(b.get_priority()));
         configs
     }
 

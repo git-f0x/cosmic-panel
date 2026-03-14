@@ -218,6 +218,6 @@ impl SpaceContainer {
             })
             .flatten()
             .collect();
-        outputs.chain(sticky_outputs.into_iter()).collect()
+        outputs.chain(sticky_outputs).collect()
     }
 }

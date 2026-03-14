@@ -66,7 +66,7 @@ impl TouchHandler for GlobalState {
                     slot: Some(id as u32).into(),
                     location: c_pos.to_f64() + Point::from(location),
                     serial: SERIAL_COUNTER.next_serial(),
-                    time: time.try_into().unwrap(),
+                    time,
                 },
             );
             touch.frame(self);
@@ -89,7 +89,7 @@ impl TouchHandler for GlobalState {
             &touch::UpEvent {
                 slot: Some(id as u32).into(),
                 serial: SERIAL_COUNTER.next_serial(),
-                time: time.try_into().unwrap(),
+                time,
             },
         );
     }
@@ -105,23 +105,23 @@ impl TouchHandler for GlobalState {
     ) {
         let (seat_name, touch) = get_touch_handle(self, touch);
 
-        if let Some(surface) = self.client_state.touch_surfaces.get(&id) {
-            if let Some(ServerPointerFocus { surface, c_pos, s_pos, .. }) = self.space.touch_under(
+        if let Some(surface) = self.client_state.touch_surfaces.get(&id)
+            && let Some(ServerPointerFocus { surface, c_pos, s_pos, .. }) = self.space.touch_under(
                 (location.0 as i32, location.1 as i32),
                 &seat_name,
                 surface.clone(),
-            ) {
-                touch.motion(
-                    self,
-                    Some((surface, s_pos)),
-                    &touch::MotionEvent {
-                        slot: Some(id as u32).into(),
-                        location: c_pos.to_f64() + Point::from(location),
-                        time: time.try_into().unwrap(),
-                    },
-                );
-                touch.frame(self);
-            }
+            )
+        {
+            touch.motion(
+                self,
+                Some((surface, s_pos)),
+                &touch::MotionEvent {
+                    slot: Some(id as u32).into(),
+                    location: c_pos.to_f64() + Point::from(location),
+                    time,
+                },
+            );
+            touch.frame(self);
         }
     }
 

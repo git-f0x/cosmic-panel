@@ -48,11 +48,7 @@ impl SeatHandler for GlobalState {
             };
 
             let touch = if info.has_touch {
-                if let Ok(touch) = self.client_state.seat_state.get_touch(qh, &seat) {
-                    Some(touch)
-                } else {
-                    None
-                }
+                self.client_state.seat_state.get_touch(qh, &seat).ok()
             } else {
                 None
             };

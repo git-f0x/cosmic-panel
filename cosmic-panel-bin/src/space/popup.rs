@@ -11,7 +11,7 @@ use wayland_egl::WlEglSurface;
 use super::PanelSpace;
 
 impl PanelSpace {
-    pub(crate) fn close_popups<'a>(&mut self, exclude: impl Fn(&PanelPopup) -> bool) {
+    pub(crate) fn close_popups(&mut self, exclude: impl Fn(&PanelPopup) -> bool) {
         let mut to_destroy = Vec::with_capacity(self.popups.len());
         self.popups.retain_mut(|p| {
             if exclude(&p.popup) {

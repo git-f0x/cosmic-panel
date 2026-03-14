@@ -18,7 +18,7 @@ impl std::hash::Hash for Spacer {
 
 impl SpaceElement for Spacer {
     fn bbox(&self) -> smithay::utils::Rectangle<i32, Logical> {
-        self.bbox.clone()
+        self.bbox
     }
 
     fn is_in_input_region(

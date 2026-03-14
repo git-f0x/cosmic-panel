@@ -108,28 +108,27 @@ impl OutputHandler for GlobalState {
             xdg_shell_wrapper_config::WrapperOutput::Name(list) => list,
         };
 
-        if configured_outputs.iter().any(|configured| Some(configured) == info.name.as_ref()) {
-            if let Some(saved_output) = self.client_state.outputs.iter_mut().find(|o| o.0 == output)
-            {
-                let res = space.update_output(output.clone(), saved_output.1.clone(), info.clone());
-                if let Err(err) = res {
-                    error!("{}", err);
-                } else if matches!(res, Ok(false)) {
-                    let s_output = c_output_as_s_output(display_handle, &info);
+        if configured_outputs.iter().any(|configured| Some(configured) == info.name.as_ref())
+            && let Some(saved_output) = self.client_state.outputs.iter_mut().find(|o| o.0 == output)
+        {
+            let res = space.update_output(output.clone(), saved_output.1.clone(), info.clone());
+            if let Err(err) = res {
+                error!("{}", err);
+            } else if matches!(res, Ok(false)) {
+                let s_output = c_output_as_s_output(display_handle, &info);
 
-                    if let Err(err) = space.new_output(
-                        compositor_state,
-                        fractional_scaling_manager.as_ref(),
-                        viewporter_state.as_ref(),
-                        layer_state,
-                        conn,
-                        qh,
-                        Some(output),
-                        Some(s_output.0),
-                        Some(info),
-                    ) {
-                        warn!("{}", err);
-                    }
+                if let Err(err) = space.new_output(
+                    compositor_state,
+                    fractional_scaling_manager.as_ref(),
+                    viewporter_state.as_ref(),
+                    layer_state,
+                    conn,
+                    qh,
+                    Some(output),
+                    Some(s_output.0),
+                    Some(info),
+                ) {
+                    warn!("{}", err);
                 }
             }
         }
@@ -157,13 +156,12 @@ impl OutputHandler for GlobalState {
 
         info!("configured outputs {:?}", &configured_outputs);
 
-        if configured_outputs.iter().any(|configured| Some(configured) == info.name.as_ref()) {
-            if let Some(saved_output) = self.client_state.outputs.iter().position(|o| o.0 == output)
-            {
-                let (c, s, _) = self.client_state.outputs.remove(saved_output);
-                if let Err(err) = space.output_leave(c, s) {
-                    warn!("{}", err);
-                }
+        if configured_outputs.iter().any(|configured| Some(configured) == info.name.as_ref())
+            && let Some(saved_output) = self.client_state.outputs.iter().position(|o| o.0 == output)
+        {
+            let (c, s, _) = self.client_state.outputs.remove(saved_output);
+            if let Err(err) = space.output_leave(c, s) {
+                warn!("{}", err);
             }
         }
     }

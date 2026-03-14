@@ -654,7 +654,7 @@ impl WrapperSpace for SpaceContainer {
             self.space_list.iter_mut().enumerate().find(|(_, s)| !s.popups.is_empty())
         {
             if let Some(p_ret) = popup_space.keyboard_enter(seat_name, surface.clone()) {
-                Some(p_ret);
+                drop(p_ret);
             }
             self.space_list.iter_mut().enumerate().find_map(|(i, s)| {
                 if i != popup_space_i { s.keyboard_enter(seat_name, surface.clone()) } else { None }
