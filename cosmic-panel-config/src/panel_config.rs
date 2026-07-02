@@ -322,6 +322,10 @@ pub enum AutoHide {
 }
 
 // TODO: remove after some time (maybe Epoch 2 release)
+use std::collections::VecDeque;
+use std::sync::Mutex;
+static NEEDS_MIGRATION: Mutex<VecDeque<bool>> = Mutex::new(VecDeque::new());
+
 impl<'de> Deserialize<'de> for AutoHide {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
@@ -341,8 +345,14 @@ impl<'de> Deserialize<'de> for AutoHide {
             Either::New(New::Never) => Self::Never,
             Either::New(New::OnOverlap) => Self::OnOverlap,
             Either::New(New::Always) => Self::Always,
-            Either::Legacy(None) => Self::Never,
-            Either::Legacy(Some(_)) => Self::OnOverlap,
+            Either::Legacy(None) => {
+                NEEDS_MIGRATION.lock().unwrap().push_back(true);
+                Self::Never
+            },
+            Either::Legacy(Some(_)) => {
+                NEEDS_MIGRATION.lock().unwrap().push_back(true);
+                Self::OnOverlap
+            },
         })
     }
 }
@@ -727,6 +737,15 @@ impl CosmicPanelConfig {
         self.margin = 0;
         self.border_radius = 0;
         self.anchor_gap = false;
+    }
+
+    pub fn migrate_legacy(&self, cosmic_config: &Config) {
+        use cosmic_config::ConfigSet;
+
+        if NEEDS_MIGRATION.lock().unwrap().pop_front() == Some(true) {
+            let _ = cosmic_config.set("autohide", &self.autohide);
+            let _ = cosmic_config.set("autohide_behavior", &self.autohide_behavior);
+        }
     }
 }
 

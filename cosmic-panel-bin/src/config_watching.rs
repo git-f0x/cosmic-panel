@@ -220,6 +220,7 @@ pub fn watch_config(
         let name_clone = entry.name.clone();
         let helper =
             CosmicPanelConfig::cosmic_config(&name_clone).expect("Failed to load cosmic config");
+        CosmicPanelConfig::migrate_legacy(entry, &helper); // TODO: remove
         info!("Watching panel config entry: {:?}", helper);
         let watcher = helper
             .watch(move |helper, keys| {
